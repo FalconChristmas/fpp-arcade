@@ -479,7 +479,7 @@ public:
                         s += " - ";
                         s += "axis: " + std::to_string(ae->axis);
                         s += ", value: " + std::to_string(ae->value);
-                        lastEvents.push_back(s);
+                        lastEvents.push_back(s+' axis');
                         while (lastEvents.size() > 20) {
                             lastEvents.pop_front();
                         }
@@ -498,7 +498,7 @@ public:
                         s += " - ";
                         s += "button: " + std::to_string(be->button);
                         s += ", value: " + std::to_string(be->state);
-                        lastEvents.push_back(s);
+                        lastEvents.push_back(s+' button');
                         while (lastEvents.size() > 20) {
                             lastEvents.pop_front();
                         }
@@ -558,7 +558,7 @@ public:
                             s += "axis: " + std::to_string(ev.number);
                         }
                         s += ", value: " + std::to_string(ev.value);
-                        lastEvents.push_back(s+' oyoung');
+                        lastEvents.push_back(s+' callback');
                         while (lastEvents.size() > 20) {
                             lastEvents.pop_front();
                         }
