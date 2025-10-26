@@ -397,6 +397,8 @@ public:
         const std::string axis = args[0];
         const std::string model = args.size() > 1 ? args[1] : "";
         int value = args.size() > 2 ? std::atoi(args[2].c_str()) : 0;
+        const std::string joystickName = args.size()>3 ? args[3] : "";
+        lastEvents.push_back("FPP Processed joystick name: "+joystickName);
 
         if (model != "") {
             if (!games[model].empty()) {
