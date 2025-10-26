@@ -581,6 +581,12 @@ public:
                 if (f->second["command"] == "FPP Arcade Axis") {
                     Json::Value val = f->second;
                     val["args"][2] = std::to_string(value);
+                    //add controller name
+                    val["controler"]="";
+                    size_t colonPos = ev.find(':');
+                    if (colonPos != std::string::npos) {
+                        val["controler"] = ev.substr(0, colonPos);
+                    }
                     CommandManager::INSTANCE.run(val);
                 } else {
                     CommandManager::INSTANCE.run(f->second);
