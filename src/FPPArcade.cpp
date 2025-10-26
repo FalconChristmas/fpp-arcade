@@ -582,10 +582,10 @@ public:
                     Json::Value val = f->second;
                     val["args"][2] = std::to_string(value);
                     //add controller name
-                    val["controler"]="";
+                    val["args"].append("");
                     size_t colonPos = ev.find(':');
                     if (colonPos != std::string::npos) {
-                        val["controler"] = ev.substr(0, colonPos);
+                        val["args"][3] = ev.substr(0, colonPos);
                     }
                     CommandManager::INSTANCE.run(val);
                 } else {
