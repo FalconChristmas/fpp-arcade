@@ -589,6 +589,7 @@ public:
                     if (colonPos != std::string::npos) {
                         val["args"][3] = ev.substr(0, colonPos);
                     }
+                    lastEvents.push_back("FPP Arcade Axis joystick name: "+val["args"][3]);
                     CommandManager::INSTANCE.run(val);
                 } else {
                     CommandManager::INSTANCE.run(f->second);
