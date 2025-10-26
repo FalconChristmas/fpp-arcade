@@ -141,7 +141,7 @@ void FPPArcadeGame::stop() {
     }
 }
 //default behavior will map the axis directions to button presses
-void FPPArcadeGame::axis(const std::string &axis, int value) {
+void FPPArcadeGame::axis(const std::string &axis, int value, const std::string &joystickName = "") {
     std::string btn = "";
     if (axis == AXIS[2]) { // DOWN->UP
         if (value == 0 && lastValues[0] < 0) {
@@ -181,6 +181,10 @@ void FPPArcadeGame::axis(const std::string &axis, int value) {
         lastValues[1] = value;
     }
     if (btn != "") {
+        if (joystickName!=""){
+            btn += "|"+joystickName;
+            printf("Plugin log (FPPArcadeGame::axis): "+btn+"!\n");
+        }
         button(btn);
     }
 }
@@ -398,8 +402,7 @@ public:
         const std::string model = args.size() > 1 ? args[1] : "";
         int value = args.size() > 2 ? std::atoi(args[2].c_str()) : 0;
         const std::string joystickName = args.size()>3 ? args[3] : "";
-        std::string s = "FPP Processed joystick name: "+joystickName;
-        lastEvents.push_back(s);
+        printf("Plugin log (runAxisCommand): "+joystickName+"!\n");
 
         if (model != "") {
             if (!games[model].empty()) {
@@ -408,7 +411,7 @@ public:
         } else {
             for (auto &a : games) {
                 if (!a.second.empty()) {
-                    a.second.front()->axis(axis, value);
+                    a.second.front()->axis(axis, value,joystickName);
                 }
             }
         }
@@ -590,8 +593,6 @@ public:
                     if (colonPos != std::string::npos) {
                         val["args"][3] = ev.substr(0, colonPos);
                     }
-                    std::string s = "FPP Arcade Axis joystick name: "+ev.substr(0, colonPos);
-                    lastEvents.push_back(s);
                     CommandManager::INSTANCE.run(val);
                 } else {
                     CommandManager::INSTANCE.run(f->second);
