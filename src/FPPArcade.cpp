@@ -398,7 +398,8 @@ public:
         const std::string model = args.size() > 1 ? args[1] : "";
         int value = args.size() > 2 ? std::atoi(args[2].c_str()) : 0;
         const std::string joystickName = args.size()>3 ? args[3] : "";
-        lastEvents.push_back("FPP Processed joystick name: "+joystickName);
+        std::string s = "FPP Processed joystick name: "+joystickName;
+        lastEvents.push_back(s);
 
         if (model != "") {
             if (!games[model].empty()) {
@@ -479,7 +480,7 @@ public:
                         s += " - ";
                         s += "axis: " + std::to_string(ae->axis);
                         s += ", value: " + std::to_string(ae->value);
-                        lastEvents.push_back(s+' axis');
+                        lastEvents.push_back(s);
                         while (lastEvents.size() > 20) {
                             lastEvents.pop_front();
                         }
@@ -498,7 +499,7 @@ public:
                         s += " - ";
                         s += "button: " + std::to_string(be->button);
                         s += ", value: " + std::to_string(be->state);
-                        lastEvents.push_back(s+' button');
+                        lastEvents.push_back(s);
                         while (lastEvents.size() > 20) {
                             lastEvents.pop_front();
                         }
@@ -558,7 +559,7 @@ public:
                             s += "axis: " + std::to_string(ev.number);
                         }
                         s += ", value: " + std::to_string(ev.value);
-                        lastEvents.push_back(s+' callback');
+                        lastEvents.push_back(s);
                         while (lastEvents.size() > 20) {
                             lastEvents.pop_front();
                         }
@@ -589,7 +590,8 @@ public:
                     if (colonPos != std::string::npos) {
                         val["args"][3] = ev.substr(0, colonPos);
                     }
-                    lastEvents.push_back("FPP Arcade Axis joystick name: "+val["args"][3]);
+                    std::string s = "FPP Arcade Axis joystick name: "+val["args"][3];
+                    lastEvents.push_back(s);
                     CommandManager::INSTANCE.run(val);
                 } else {
                     CommandManager::INSTANCE.run(f->second);
