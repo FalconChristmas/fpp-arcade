@@ -178,7 +178,7 @@ public:
     
     void button(const std::string &butt) {
         std::string button = butt;
-        std::string joystickName = ""
+        std::string joystickName = "";
         size_t pos = butt.find('|');
         if (pos != std::string::npos) {
             button = butt.substr(0, pos);
@@ -194,16 +194,16 @@ public:
             std::time_t now_c = std::chrono::system_clock::to_time_t(now);
             log << "[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] ";
             if (joystickName.ends_with("2")){
-                log << "Joystick 2" << button << std::endl;
+                log << "Joystick 2: " << button << std::endl;
                 if (button == "Up - Pressed") {
                     racketP2Speed = -1;
                 } else if (button == "Down - Pressed") {
                     racketP2Speed = 1;
                 } else if (button == "Down - Released" || button == "Up - Released") {
                     racketP2Speed = 0;
-                } else 
+                }
             } else {
-                log << "Joystick 1" << button << std::endl;
+                log << "Joystick 1: " << button << std::endl;
                 if (button == "Up - Pressed") {
                     racketP1Speed = -1;
                 } else if (button == "Down - Pressed") {
