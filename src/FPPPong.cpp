@@ -184,7 +184,7 @@ public:
             button = butt.substr(0, pos);
             joystickName = butt.substr(pos+1);
         }
-        std::ofstream log("/home/fpp/media/plugins/fpp-arcade2/log", std::ios::app);
+        std::ofstream log("/home/fpp/media/plugins/fpp-arcade/log", std::ios::app);
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         log << "[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] ";
