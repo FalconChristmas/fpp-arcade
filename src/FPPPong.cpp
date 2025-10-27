@@ -259,6 +259,9 @@ void FPPPong::button(const std::string &button) {
     PixelOverlayModel *m = PixelOverlayManager::INSTANCE.getModel(modelName);
     if (m != nullptr) {
         PongEffect *effect = dynamic_cast<PongEffect*>(m->getRunningEffect());
+        std::string msg = "Plugin log (FPPPong::button): "+button;
+        std::ofstream log("/home/fpp/media/plugins/fpp-arcade2/log", std::ios::app);
+        log << msg << std::endl;
         if (!effect) {
             if (findOption("overlay", "Overwrite") == "Transparent") {
                 m->setState(PixelOverlayState(PixelOverlayState::PixelState::TransparentRGB));

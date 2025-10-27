@@ -183,9 +183,9 @@ void FPPArcadeGame::axis(const std::string &axis, int value, const std::string &
     if (btn != "") {
         if (joystickName!=""){
             btn += "|"+joystickName;
-            std::string msg = "Plugin log (FPPArcadeGame::axis): "+btn;
-            std::ofstream log("/home/fpp/media/plugins/fpp-arcade2/log", std::ios::app);
-            log << msg << std::endl;
+            //std::string msg = "Plugin log (FPPArcadeGame::axis): "+btn;
+            //std::ofstream log("/home/fpp/media/plugins/fpp-arcade2/log", std::ios::app);
+            //log << msg << std::endl;
         }
         button(btn);
     }
@@ -404,9 +404,9 @@ public:
         const std::string model = args.size() > 1 ? args[1] : "";
         int value = args.size() > 2 ? std::atoi(args[2].c_str()) : 0;
         const std::string joystickName = args.size()>3 ? args[3] : "";
-        std::string msg = "Plugin log (runAxisCommand): "+joystickName;
-        std::ofstream log("/home/fpp/media/plugins/fpp-arcade2/log", std::ios::app);
-        log << msg << std::endl;
+        //std::string msg = "Plugin log (runAxisCommand): "+joystickName;
+        //std::ofstream log("/home/fpp/media/plugins/fpp-arcade2/log", std::ios::app);
+        //log << msg << std::endl;
 
         if (model != "") {
             if (!games[model].empty()) {
