@@ -47,6 +47,7 @@ function GetPongOptions() {
     html += "<option value='1'>Up/Down and Left/Right</option>";
     html += "<option value='2'>UpLeft/DownLeft and UpRight/DownRight</option>";
     html += "<option value='3'>Up/Left and Right/Down </option>";
+    html += "<option value='4'>Up/Down separate joysticks </option>";
     html += "</select>"
     return html;
 }
