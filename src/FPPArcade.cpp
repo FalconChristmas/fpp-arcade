@@ -183,7 +183,8 @@ void FPPArcadeGame::axis(const std::string &axis, int value, const std::string &
     if (btn != "") {
         if (joystickName!=""){
             btn += "|"+joystickName;
-            printf("Plugin log (FPPArcadeGame::axis): "+btn+"!\n");
+            std::string msg = "Plugin log (FPPArcadeGame::axis): "+btn;
+            printf("%s\n",msg.c_str());
         }
         button(btn);
     }
@@ -402,7 +403,8 @@ public:
         const std::string model = args.size() > 1 ? args[1] : "";
         int value = args.size() > 2 ? std::atoi(args[2].c_str()) : 0;
         const std::string joystickName = args.size()>3 ? args[3] : "";
-        printf("Plugin log (runAxisCommand): "+joystickName+"!\n");
+        std::string msg = "Plugin log (runAxisCommand): "+joystickName;
+        printf("%s\n",msg.c_str());
 
         if (model != "") {
             if (!games[model].empty()) {
