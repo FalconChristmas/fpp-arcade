@@ -141,7 +141,7 @@ void FPPArcadeGame::stop() {
     }
 }
 //default behavior will map the axis directions to button presses
-void FPPArcadeGame::axis(const std::string &axis, int value, const std::string &joystickName = "") {
+void FPPArcadeGame::axis(const std::string &axis, int value, const std::string &joystickName) {
     std::string btn = "";
     if (axis == AXIS[2]) { // DOWN->UP
         if (value == 0 && lastValues[0] < 0) {
