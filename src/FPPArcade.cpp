@@ -44,7 +44,7 @@ extern "C" {
 #include "FPPPong.h"
 #include "FPPSnake.h"
 #include "FPPBreakout.h"
-
+#include "FPPFrogger.h"
 
 static std::vector<std::string> BUTTONS({
     "Up - Pressed", "Up - Released",
@@ -252,6 +252,7 @@ static const std::map<uint8_t, std::vector<uint8_t>> LETTERS = {
     {'A', {1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1}},
     {'M', {1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1}},
     {'E', {1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1}},
+    {'F', {1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0}},
     {'O', {1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1}},
     {'V', {1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0}},
     {'R', {1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1}},
@@ -311,7 +312,13 @@ private:
     
     std::vector<uint8_t> data;
 };
-FPPArcadeGameEffect::FPPArcadeGameEffect(PixelOverlayModel *m) : RunningEffect(m), scale(1), offsetX(0), offsetY(0) {
+FPPArcadeGameEffect::FPPArcadeGameEffect(PixelOverlayModel *m)
+    : RunningEffect(m),
+      scale(1),
+      offsetX(0),
+      offsetY(0),
+      lastFrameTime(std::chrono::steady_clock::now()),
+      firstFrame(true) {
 }
 FPPArcadeGameEffect::~FPPArcadeGameEffect() {
 }
@@ -357,6 +364,28 @@ int FPPArcadeGameEffect::centerTextX(const std::string &s, int scl) {
         x = 0;
     }
     return x;
+}
+
+double FPPArcadeGameEffect::consumeElapsedMs(double fallbackMs, double maxClampMs) {
+    auto now = std::chrono::steady_clock::now();
+    double elapsed = std::chrono::duration<double, std::milli>(now - lastFrameTime).count();
+    lastFrameTime = now;
+    if (firstFrame) {
+        firstFrame = false;
+        return fallbackMs;
+    }
+    if (elapsed <= 0.0) {
+        elapsed = fallbackMs;
+    }
+    if (maxClampMs > 0.0) {
+        elapsed = std::min(elapsed, maxClampMs);
+    }
+    return elapsed;
+}
+
+void FPPArcadeGameEffect::resetFrameTimer() {
+    firstFrame = true;
+    lastFrameTime = std::chrono::steady_clock::now();
 }
 
 class FPPArcadePlugin : public FPPPlugin , public httpserver::http_resource {
@@ -424,6 +453,9 @@ public:
         }
         if (game == "Breakout") {
             return new FPPBreakout(config);
+        }
+        if (game == "Frogger") {
+            return new FPPFrogger(config);
         }
         return nullptr;
     }
