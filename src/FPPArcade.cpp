@@ -378,10 +378,13 @@ public:
     std::unique_ptr<Command::Result>  selectGame(const std::vector<std::string> &args) {
         int idx = std::atoi(args[0].c_str());
         const std::string model = args.size() > 1 ? args[1] : "";
+        int max = games[model].size();
+        if (max == 0) {
+            return std::make_unique<Command::ErrorResult>("FPP Arcade No games configured for model " + model);
+        }
         if (games[model].front()->isRunning()) {
             games[model].front()->stop();
         }
-        int max = games[model].size();
         for (int x = 0; x < max; x++) {
             FPPArcadeGame *g = games[model].front();
             if (g->getIdx() == idx) {
