@@ -1,11 +1,11 @@
 {
-	"repoName": "fpp-arcade",
-	"name": "FPP Arcade",
+	"repoName": "fpp-arcade2",
+	"name": "FPP Arcade Multi-Player",
 	"author": "Daniel Kulp",
-	"description": "Various Games to Play on FPP Pixel Overlay Models",
-	"homeURL": "https://github.com/FalconChristmas/fpp-arcade",
-	"srcURL": "https://github.com/FalconChristmas/fpp-arcade.git",
-	"bugURL": "https://github.com/FalconChristmas/fpp-arcade/issues",
+	"description": "Various Games to Play on FPP Pixel Overlay Models.  Enables Multi-Player functionality for games that support it. (Currently only Pong).",
+	"homeURL": "https://github.com/schreyack/fpp-arcade",
+	"srcURL": "https://github.com/schreyack/fpp-arcade.git",
+	"bugURL": "https://github.com/schreyack/fpp-arcade/issues",
 	"versions": [
         {
             "minFPPVersion": "4.0",

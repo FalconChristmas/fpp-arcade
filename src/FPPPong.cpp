@@ -176,8 +176,33 @@ public:
         }
     }
     
-    void button(const std::string &button) {
-        if (controls == 2) {
+    void button(const std::string &butt) {
+        std::string button = butt;
+        std::string joystickName = "";
+        size_t pos = butt.find('|');
+        if (pos != std::string::npos) {
+            button = butt.substr(0, pos);
+            joystickName = butt.substr(pos+1);
+        }
+        if (controls == 4){
+            if (joystickName.ends_with("2")){
+                if (button == "Up - Pressed") {
+                    racketP2Speed = -1;
+                } else if (button == "Down - Pressed") {
+                    racketP2Speed = 1;
+                } else if (button == "Down - Released" || button == "Up - Released") {
+                    racketP2Speed = 0;
+                }
+            } else {
+                if (button == "Up - Pressed") {
+                    racketP1Speed = -1;
+                } else if (button == "Down - Pressed") {
+                    racketP1Speed = 1;
+                } else if (button == "Down - Released" || button == "Up - Released") {
+                    racketP1Speed = 0;
+                }
+            }
+        } else if (controls == 2) {
             if (button == "Up/Right - Pressed") {
                 racketP2Speed = -1;
             } else if (button == "Down/Right - Pressed") {

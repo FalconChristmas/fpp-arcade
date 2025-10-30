@@ -226,7 +226,14 @@ public:
             y *= length;
         }
     }
-    void button(const std::string &button) {
+    void button(const std::string &butt) {
+        std::string button = butt;
+        std::string joystickName = "";
+        size_t pos = butt.find('|');
+        if (pos != std::string::npos) {
+            button = butt.substr(0, pos);
+            joystickName = butt.substr(pos+1);
+        }
         if (button == "Left - Pressed") {
             direction = -1;
         } else if (button == "Left - Released") {
