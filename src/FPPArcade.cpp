@@ -431,38 +431,48 @@ public:
         return std::make_unique<Command::Result>("FPP Arcade Button Processed");
     }
     
+    std::string getArcadePath(const httpserver::http_request &req) {
+        std::vector<std::string> pieces = req.get_path_pieces();
+        if (pieces.size() == 2 && pieces[0] == "arcade") {
+            return pieces[1];
+        }
+        if (pieces.size() == 4 && pieces[0] == "api" && pieces[1] == "plugin-apis" && pieces[2] == "arcade") {
+            return pieces[3];
+        }
+        return std::string();
+    }
+
     virtual HTTP_RESPONSE_CONST std::shared_ptr<httpserver::http_response> render_GET(const httpserver::http_request &req) override {
-        int plen = req.get_path_pieces().size();
-        if (plen == 2) {
-            if (req.get_path_pieces()[1] == "controllers") {
-                std::string s = "[";
-                for (auto &j : joysticks) {
-                    if (s.size() > 2) {
-                        s += ",\n";
-                    }
-                    s += "  {\n";
-                    s += "    \"name\": \"";
-                    s += j.name;
-                    s += "\",\n    \"buttons\": ";
-                    s += std::to_string(j.numButtons);
-                    s += ",\n    \"axis\": ";
-                    s += std::to_string(j.numAxis);
-                    s += "\n  }";
+        std::string path = getArcadePath(req);
+        if (path == "controllers") {
+            std::string s = "[";
+            for (auto &j : joysticks) {
+                if (s.size() > 2) {
+                    s += ",\n";
                 }
-                s += "\n]";
-                return std::shared_ptr<httpserver::http_response>(new httpserver::string_response(s, 200, "application/json"));
-            } else  if (req.get_path_pieces()[1] == "events") {
-                std::string v;
-                for (auto &a : lastEvents) {
-                    v += a + "\n";
-                }
-                return std::shared_ptr<httpserver::http_response>(new httpserver::string_response(v, 200));
+                s += "  {\n";
+                s += "    \"name\": \"";
+                s += j.name;
+                s += "\",\n    \"buttons\": ";
+                s += std::to_string(j.numButtons);
+                s += ",\n    \"axis\": ";
+                s += std::to_string(j.numAxis);
+                s += "\n  }";
             }
+            s += "\n]";
+            return std::shared_ptr<httpserver::http_response>(new httpserver::string_response(s, 200, "application/json"));
+        } else if (path == "events") {
+            std::string v;
+            for (auto &a : lastEvents) {
+                v += a + "\n";
+            }
+            return std::shared_ptr<httpserver::http_response>(new httpserver::string_response(v, 200));
         }
         return std::shared_ptr<httpserver::http_response>(new httpserver::string_response("Not found", 404));
     }
     void registerApis(httpserver::webserver *m_ws) override {
         m_ws->register_resource("/arcade", this, true);
+        m_ws->register_resource("/api/plugin-apis/arcade", this, true);
     }
 
 #ifdef USE_SDL_CONTROLLERS
