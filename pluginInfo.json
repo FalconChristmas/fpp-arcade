@@ -33,6 +33,13 @@
             "branch": "master",
             "sha": "",
             "allowUpdates": 1
+        },
+        {
+            "minFPPVersion": "10.0",
+            "maxFPPVersion": "0",
+            "branch": "master",
+            "sha": "",
+            "allowUpdates": 1
         }
     ]
 }
