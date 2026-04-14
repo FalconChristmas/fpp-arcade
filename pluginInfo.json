@@ -1,12 +1,12 @@
 {
-	"repoName": "fpp-arcade",
-	"name": "FPP Arcade",
-	"author": "Daniel Kulp",
-	"description": "Various Games to Play on FPP Pixel Overlay Models",
-	"homeURL": "https://github.com/FalconChristmas/fpp-arcade",
-	"srcURL": "https://github.com/FalconChristmas/fpp-arcade.git",
-	"bugURL": "https://github.com/FalconChristmas/fpp-arcade/issues",
-	"versions": [
+    "repoName": "fpp-arcade",
+    "name": "FPP Arcade",
+    "author": "Daniel Kulp",
+    "description": "Various Games to Play on FPP Pixel Overlay Models",
+    "homeURL": "https://github.com/FalconChristmas/fpp-arcade",
+    "srcURL": "https://github.com/FalconChristmas/fpp-arcade.git",
+    "bugURL": "https://github.com/FalconChristmas/fpp-arcade/issues",
+    "versions": [
         {
             "minFPPVersion": "4.0",
             "maxFPPVersion": "5.99",
@@ -24,16 +24,22 @@
             "minFPPVersion": "7.0",
             "maxFPPVersion": "8.99",
             "branch": "master",
-            "sha": "",
+            "sha": "4723c22f89200e25d683d73e310f96a922438814",
             "allowUpdates": 1
         },
-	{
+        {
             "minFPPVersion": "9.0",
+            "maxFPPVersion": "0",
+            "branch": "master",
+            "sha": "4723c22f89200e25d683d73e310f96a922438814",
+            "allowUpdates": 1
+        },
+        {
+            "minFPPVersion": "10.0",
             "maxFPPVersion": "0",
             "branch": "master",
             "sha": "",
             "allowUpdates": 1
-        }	
-	]
+        }
+    ]
 }
-
