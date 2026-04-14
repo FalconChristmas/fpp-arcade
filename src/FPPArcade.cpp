@@ -1,4 +1,5 @@
 #include <fpp-pch.h>
+#include <drogon/HttpAppFramework.h>
 
 
 #ifdef PLATFORM_OSX
@@ -23,7 +24,6 @@ extern "C" {
 #include <cstring>
 #include <list>
 #include <vector>
-#include <httpserver.hpp>
 #include <cmath>
 #include <fcntl.h>
 
@@ -288,7 +288,7 @@ void FPPArcadeGameEffect::outputString(const std::string &s, int x, int y, int r
     }
 }
 
-class FPPArcadePlugin : public FPPPlugin , public httpserver::http_resource {
+class FPPArcadePlugin : public FPPPlugin {
 public:
     
     FPPArcadePlugin() : FPPPlugin("fpp-arcade") {
@@ -431,8 +431,8 @@ public:
         return std::make_unique<Command::Result>("FPP Arcade Button Processed");
     }
     
-    std::string getArcadePath(const httpserver::http_request &req) {
-        std::vector<std::string> pieces = req.get_path_pieces();
+    std::string getArcadePath(const HttpRequestPtr& req) {
+        std::vector<std::string> pieces = getPathPieces(req->path());
         if (pieces.size() == 2 && pieces[0] == "arcade") {
             return pieces[1];
         }
@@ -442,37 +442,42 @@ public:
         return std::string();
     }
 
-    virtual HTTP_RESPONSE_CONST std::shared_ptr<httpserver::http_response> render_GET(const httpserver::http_request &req) override {
-        std::string path = getArcadePath(req);
-        if (path == "controllers") {
-            std::string s = "[";
-            for (auto &j : joysticks) {
-                if (s.size() > 2) {
-                    s += ",\n";
+    void registerApis() override {
+        auto handleArcade = [this](const HttpRequestPtr& req,
+                                   std::function<void(const HttpResponsePtr&)>&& callback) {
+            std::string path = getArcadePath(req);
+            if (path == "controllers") {
+                std::string s = "[";
+                for (auto &j : joysticks) {
+                    if (s.size() > 2) {
+                        s += ",\n";
+                    }
+                    s += "  {\n";
+                    s += "    \"name\": \"";
+                    s += j.name;
+                    s += "\",\n    \"buttons\": ";
+                    s += std::to_string(j.numButtons);
+                    s += ",\n    \"axis\": ";
+                    s += std::to_string(j.numAxis);
+                    s += "\n  }";
                 }
-                s += "  {\n";
-                s += "    \"name\": \"";
-                s += j.name;
-                s += "\",\n    \"buttons\": ";
-                s += std::to_string(j.numButtons);
-                s += ",\n    \"axis\": ";
-                s += std::to_string(j.numAxis);
-                s += "\n  }";
+                s += "\n]";
+                callback(makeStringResponse(s, 200, "application/json"));
+            } else if (path == "events") {
+                std::string v;
+                for (auto &a : lastEvents) {
+                    v += a + "\n";
+                }
+                callback(makeStringResponse(v, 200));
+            } else {
+                callback(makeStringResponse("Not found", 404));
             }
-            s += "\n]";
-            return std::shared_ptr<httpserver::http_response>(new httpserver::string_response(s, 200, "application/json"));
-        } else if (path == "events") {
-            std::string v;
-            for (auto &a : lastEvents) {
-                v += a + "\n";
-            }
-            return std::shared_ptr<httpserver::http_response>(new httpserver::string_response(v, 200));
-        }
-        return std::shared_ptr<httpserver::http_response>(new httpserver::string_response("Not found", 404));
-    }
-    void registerApis(httpserver::webserver *m_ws) override {
-        m_ws->register_resource("/arcade", this, true);
-        m_ws->register_resource("/api/plugin-apis/arcade", this, true);
+        };
+
+        drogon::app().registerHandler("/arcade/controllers", handleArcade, {drogon::Get});
+        drogon::app().registerHandler("/arcade/events", handleArcade, {drogon::Get});
+        drogon::app().registerHandler("/api/plugin-apis/arcade/controllers", handleArcade, {drogon::Get});
+        drogon::app().registerHandler("/api/plugin-apis/arcade/events", handleArcade, {drogon::Get});
     }
 
 #ifdef USE_SDL_CONTROLLERS
