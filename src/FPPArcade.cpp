@@ -26,6 +26,7 @@ extern "C" {
 #include <vector>
 #include <cmath>
 #include <fcntl.h>
+#include <mutex>
 
 #include "FPPArcade.h"
 
@@ -61,6 +62,65 @@ static std::vector<std::string> BUTTONS({
 static std::vector<std::string> AXIS({
     "Up -> Down", "Left -> Right", "Down -> Up", "Right -> Left"
 });
+
+namespace {
+struct ArcadeControllerInfo {
+    std::string name;
+    int numButtons;
+    int numAxis;
+};
+
+std::mutex gArcadeControllersLock;
+std::vector<ArcadeControllerInfo> gArcadeControllers;
+
+std::mutex gArcadeEventsLock;
+std::list<std::string> gArcadeLastEvents;
+
+std::vector<ArcadeControllerInfo> getArcadeControllersSnapshot() {
+    std::lock_guard<std::mutex> lock(gArcadeControllersLock);
+    return gArcadeControllers;
+}
+
+std::list<std::string> getArcadeEventsSnapshot() {
+    std::lock_guard<std::mutex> lock(gArcadeEventsLock);
+    return gArcadeLastEvents;
+}
+
+void setArcadeControllers(std::vector<ArcadeControllerInfo>&& controllers) {
+    std::lock_guard<std::mutex> lock(gArcadeControllersLock);
+    gArcadeControllers = std::move(controllers);
+}
+
+void appendArcadeEvent(const std::string &s) {
+    std::lock_guard<std::mutex> lock(gArcadeEventsLock);
+    gArcadeLastEvents.push_back(s);
+    while (gArcadeLastEvents.size() > 20) {
+        gArcadeLastEvents.pop_front();
+    }
+}
+
+void resetArcadeState() {
+    {
+        std::lock_guard<std::mutex> lock(gArcadeControllersLock);
+        gArcadeControllers.clear();
+    }
+    {
+        std::lock_guard<std::mutex> lock(gArcadeEventsLock);
+        gArcadeLastEvents.clear();
+    }
+}
+
+std::string getArcadePath(const HttpRequestPtr& req) {
+    std::vector<std::string> pieces = getPathPieces(req->path());
+    if (pieces.size() == 2 && pieces[0] == "arcade") {
+        return pieces[1];
+    }
+    if (pieces.size() == 4 && pieces[0] == "api" && pieces[1] == "plugin-apis" && pieces[2] == "arcade") {
+        return pieces[3];
+    }
+    return std::string();
+}
+}
 
 class FPPArcadePlugin;
 class FPPArcadeCommand : public Command {
@@ -293,6 +353,7 @@ public:
     
     FPPArcadePlugin() : FPPPlugin("fpp-arcade") {
         LogInfo(VB_PLUGIN, "Initializing Arcade Plugin\n");
+        resetArcadeState();
         
         int idx = 0;
         if (FileExists(FPP_DIR_CONFIG("/plugin.fpp-arcade.json"))) {
@@ -334,6 +395,7 @@ public:
         }
     }
     virtual ~FPPArcadePlugin() {
+        resetArcadeState();
         for (auto & a : games) {
             for (auto &g : a.second) {
                 delete g;
@@ -431,41 +493,32 @@ public:
         return std::make_unique<Command::Result>("FPP Arcade Button Processed");
     }
     
-    std::string getArcadePath(const HttpRequestPtr& req) {
-        std::vector<std::string> pieces = getPathPieces(req->path());
-        if (pieces.size() == 2 && pieces[0] == "arcade") {
-            return pieces[1];
-        }
-        if (pieces.size() == 4 && pieces[0] == "api" && pieces[1] == "plugin-apis" && pieces[2] == "arcade") {
-            return pieces[3];
-        }
-        return std::string();
-    }
-
     void registerApis() override {
-        auto handleArcade = [this](const HttpRequestPtr& req,
+        LogInfo(VB_PLUGIN, "Registering Arcade Plugin APIs\n");
+        auto handleArcade = [](const HttpRequestPtr& req,
                                    std::function<void(const HttpResponsePtr&)>&& callback) {
             std::string path = getArcadePath(req);
+            LogDebug(VB_PLUGIN, "Arcade API Request: %s\n", path.c_str());
             if (path == "controllers") {
-                std::string s = "[";
-                for (auto &j : joysticks) {
-                    if (s.size() > 2) {
-                        s += ",\n";
-                    }
-                    s += "  {\n";
-                    s += "    \"name\": \"";
-                    s += j.name;
-                    s += "\",\n    \"buttons\": ";
-                    s += std::to_string(j.numButtons);
-                    s += ",\n    \"axis\": ";
-                    s += std::to_string(j.numAxis);
-                    s += "\n  }";
+                auto joystickSnapshot = getArcadeControllersSnapshot();
+
+                Json::Value response(Json::arrayValue);
+                for (const auto &j : joystickSnapshot) {
+                    Json::Value c;
+                    c["name"] = j.name;
+                    c["buttons"] = j.numButtons;
+                    c["axis"] = j.numAxis;
+                    response.append(c);
                 }
-                s += "\n]";
+
+                Json::StreamWriterBuilder writer;
+                writer["indentation"] = "";
+                std::string s = Json::writeString(writer, response);
                 callback(makeStringResponse(s, 200, "application/json"));
             } else if (path == "events") {
+                auto eventsSnapshot = getArcadeEventsSnapshot();
                 std::string v;
-                for (auto &a : lastEvents) {
+                for (auto &a : eventsSnapshot) {
                     v += a + "\n";
                 }
                 callback(makeStringResponse(v, 200));
@@ -489,38 +542,48 @@ public:
         switch (event->type) {
             case SDL_CONTROLLERAXISMOTION: {
                 SDL_ControllerAxisEvent *ae = (SDL_ControllerAxisEvent*)event;
-                for (auto &j : joysticks) {
-                    if (j.joystickId == ae->which) {
-                        std::string s = j.name;
-                        s += " - ";
-                        s += "axis: " + std::to_string(ae->axis);
-                        s += ", value: " + std::to_string(ae->value);
-                        lastEvents.push_back(s);
-                        while (lastEvents.size() > 20) {
-                            lastEvents.pop_front();
+                std::string joystickName;
+                {
+                    std::lock_guard<std::mutex> lock(joysticksLock);
+                    for (const auto &j : joysticks) {
+                        if (j.joystickId == ae->which) {
+                            joystickName = j.name;
+                            break;
                         }
-                        std::string evnt = j.name + ":a" + std::to_string(ae->axis);
-                        processEvent(evnt, ae->value);
                     }
+                }
+                if (!joystickName.empty()) {
+                    std::string s = joystickName;
+                    s += " - ";
+                    s += "axis: " + std::to_string(ae->axis);
+                    s += ", value: " + std::to_string(ae->value);
+                    appendLastEvent(s);
+                    std::string evnt = joystickName + ":a" + std::to_string(ae->axis);
+                    processEvent(evnt, ae->value);
                 }
                 return 0;
             }
             case SDL_CONTROLLERBUTTONDOWN:
             case SDL_CONTROLLERBUTTONUP: {
                 SDL_ControllerButtonEvent *be = (SDL_ControllerButtonEvent*)event;
-                for (auto &j : joysticks) {
-                    if (j.joystickId == be->which) {
-                        std::string s = j.name;
-                        s += " - ";
-                        s += "button: " + std::to_string(be->button);
-                        s += ", value: " + std::to_string(be->state);
-                        lastEvents.push_back(s);
-                        while (lastEvents.size() > 20) {
-                            lastEvents.pop_front();
+                std::string joystickName;
+                {
+                    std::lock_guard<std::mutex> lock(joysticksLock);
+                    for (const auto &j : joysticks) {
+                        if (j.joystickId == be->which) {
+                            joystickName = j.name;
+                            break;
                         }
-                        std::string evnt = j.name + ":" + std::to_string(be->button) + ":" + std::to_string(be->state);
-                        processEvent(evnt, be->state);
                     }
+                }
+                if (!joystickName.empty()) {
+                    std::string s = joystickName;
+                    s += " - ";
+                    s += "button: " + std::to_string(be->button);
+                    s += ", value: " + std::to_string(be->state);
+                    appendLastEvent(s);
+                    std::string evnt = joystickName + ":" + std::to_string(be->button) + ":" + std::to_string(be->state);
+                    processEvent(evnt, be->state);
                 }
                 return 0;
             }
@@ -529,7 +592,24 @@ public:
     }
 #endif
 
+    void appendLastEvent(const std::string &s) {
+        appendArcadeEvent(s);
+    }
+
+    void updateControllerSnapshot() {
+        std::vector<ArcadeControllerInfo> controllers;
+        {
+            std::lock_guard<std::mutex> lock(joysticksLock);
+            controllers.reserve(joysticks.size());
+            for (const auto &j : joysticks) {
+                controllers.push_back({j.name, j.numButtons, j.numAxis});
+            }
+        }
+        setArcadeControllers(std::move(controllers));
+    }
+
     void checkUniqueNames() {
+        std::lock_guard<std::mutex> lock(joysticksLock);
         std::map<std::string, int> names;
         for (auto &j : joysticks) {
             names[j.name]++;
@@ -546,27 +626,46 @@ public:
 #ifdef USE_SDL_CONTROLLERS
         SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS);
         SDL_SetEventFilter(controller_event_filter, this);
-        for (int x = 0; x < SDL_NumJoysticks(); x++) {
-            if (SDL_IsGameController(x)) {
-                joysticks.emplace_back(Joystick(x));
+        {
+            std::lock_guard<std::mutex> lock(joysticksLock);
+            for (int x = 0; x < SDL_NumJoysticks(); x++) {
+                if (SDL_IsGameController(x)) {
+                    joysticks.emplace_back(Joystick(x));
+                }
             }
         }
         checkUniqueNames();
 #else
-        for (int x = 0; x < 10; x++) {
-            std::string js = "/dev/input/js" + std::to_string(x);
-            if (FileExists(js)) {
-                int i = open(js.c_str(), O_RDONLY | O_NONBLOCK);
-                joysticks.emplace_back(Joystick(i));
+        {
+            std::lock_guard<std::mutex> lock(joysticksLock);
+            for (int x = 0; x < 10; x++) {
+                std::string js = "/dev/input/js" + std::to_string(x);
+                if (FileExists(js)) {
+                    int i = open(js.c_str(), O_RDONLY | O_NONBLOCK);
+                    if (i >= 0) {
+                        joysticks.emplace_back(Joystick(i));
+                    } else {
+                        LogWarn(VB_PLUGIN, "Could not open %s: %s\n", js.c_str(), strerror(errno));
+                    }
+                }
             }
         }
         checkUniqueNames();
-        for (auto & a : joysticks) {
-            callbacks[a.file] = [&a, this] (int f) {
+
+        std::vector<std::pair<int, std::string>> joystickSnapshot;
+        {
+            std::lock_guard<std::mutex> lock(joysticksLock);
+            joystickSnapshot.reserve(joysticks.size());
+            for (const auto &a : joysticks) {
+                joystickSnapshot.emplace_back(a.file, a.name);
+            }
+        }
+        for (const auto &a : joystickSnapshot) {
+            callbacks[a.first] = [joyName = a.second, this] (int f) {
                 struct js_event ev;
                 while (read(f, &ev, sizeof(ev)) > 0) {
                     if (!(ev.type & JS_EVENT_INIT)) {
-                        std::string s = a.name;
+                        std::string s = joyName;
                         s += " - ";
                         if (ev.type == 1) {
                             s += "button: " + std::to_string(ev.number);
@@ -574,12 +673,9 @@ public:
                             s += "axis: " + std::to_string(ev.number);
                         }
                         s += ", value: " + std::to_string(ev.value);
-                        lastEvents.push_back(s);
-                        while (lastEvents.size() > 20) {
-                            lastEvents.pop_front();
-                        }
+                        appendLastEvent(s);
                         
-                        std::string evnt = a.name + ":" + (ev.type == 2 ? "a" : "") + std::to_string(ev.number);
+                        std::string evnt = joyName + ":" + (ev.type == 2 ? "a" : "") + std::to_string(ev.number);
                         if (ev.type == 1) {
                             evnt += ":" + std::to_string(ev.value);
                         }
@@ -590,6 +686,7 @@ public:
             };
         }
 #endif
+    updateControllerSnapshot();
     }
     
     void processEvent(const std::string &ev, int value) {
@@ -625,10 +722,26 @@ public:
             numButtons = tmp;
 #else
             controller = SDL_GameControllerOpen(f);
-            joystickId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
-            name = SDL_GameControllerName(controller);
-            numAxis = SDL_JoystickNumAxes(SDL_GameControllerGetJoystick(controller));
-            numButtons = std::max(15, SDL_JoystickNumButtons(SDL_GameControllerGetJoystick(controller)));
+            if (!controller) {
+                joystickId = -1;
+                name = "SDL Controller " + std::to_string(f);
+                LogWarn(VB_PLUGIN, "Could not open SDL controller %d: %s\n", f, SDL_GetError());
+            } else {
+                SDL_Joystick *joystick = SDL_GameControllerGetJoystick(controller);
+                if (!joystick) {
+                    joystickId = -1;
+                    name = "SDL Controller " + std::to_string(f);
+                    LogWarn(VB_PLUGIN, "Could not get SDL joystick for controller %d: %s\n", f, SDL_GetError());
+                    SDL_GameControllerClose(controller);
+                    controller = nullptr;
+                } else {
+                    const char *controllerName = SDL_GameControllerName(controller);
+                    joystickId = SDL_JoystickInstanceID(joystick);
+                    name = controllerName ? controllerName : ("SDL Controller " + std::to_string(f));
+                    numAxis = SDL_JoystickNumAxes(joystick);
+                    numButtons = std::max(15, SDL_JoystickNumButtons(joystick));
+                }
+            }
 #endif
         }
         Joystick(Joystick &&j) : file(j.file), name(j.name), numButtons(j.numButtons), numAxis(j.numAxis), controller(j.controller), joystickId(j.joystickId) {
@@ -659,7 +772,7 @@ public:
     };
     
     std::list<Joystick> joysticks;
-    std::list<std::string> lastEvents;
+    std::mutex joysticksLock;
     std::map<std::string, Json::Value> events;
 };
 
