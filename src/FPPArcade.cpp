@@ -348,10 +348,10 @@ void FPPArcadeGameEffect::outputString(const std::string &s, int x, int y, int r
     }
 }
 
-class FPPArcadePlugin : public FPPPlugin {
+class FPPArcadePlugin : public FPPPlugins::Plugin, public FPPPlugins::APIProviderPlugin {
 public:
     
-    FPPArcadePlugin() : FPPPlugin("fpp-arcade") {
+    FPPArcadePlugin() : FPPPlugins::Plugin("fpp-arcade"), FPPPlugins::APIProviderPlugin() {
         LogInfo(VB_PLUGIN, "Initializing Arcade Plugin\n");
         resetArcadeState();
         
@@ -791,7 +791,7 @@ std::unique_ptr<Command::Result> FPPArcadeSelectGameCommand::run(const std::vect
 }
 
 extern "C" {
-    FPPPlugin *createPlugin() {
+    FPPPlugins::Plugin *createPlugin() {
         return new FPPArcadePlugin();
     }
 }
