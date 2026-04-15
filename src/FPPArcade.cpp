@@ -526,11 +526,14 @@ public:
                 callback(makeStringResponse("Not found", 404));
             }
         };
+        auto handleArcade2 = handleArcade;
+        auto handleArcade3 = handleArcade;
+        auto handleArcade4 = handleArcade;
 
-        drogon::app().registerHandler("/arcade/controllers", handleArcade, {drogon::Get});
-        drogon::app().registerHandler("/arcade/events", handleArcade, {drogon::Get});
-        drogon::app().registerHandler("/api/plugin-apis/arcade/controllers", handleArcade, {drogon::Get});
-        drogon::app().registerHandler("/api/plugin-apis/arcade/events", handleArcade, {drogon::Get});
+        drogon::app().registerHandler("/arcade/controllers", std::move(handleArcade), {drogon::Get});
+        drogon::app().registerHandler("/arcade/events", std::move(handleArcade2), {drogon::Get});
+        drogon::app().registerHandler("/api/plugin-apis/arcade/controllers", std::move(handleArcade3), {drogon::Get});
+        drogon::app().registerHandler("/api/plugin-apis/arcade/events", std::move(handleArcade4), {drogon::Get});
     }
 
 #ifdef USE_SDL_CONTROLLERS
