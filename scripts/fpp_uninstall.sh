@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# fpp-osc uninstall script
+# fpp-arcade uninstall script
 echo "Running fpp-arcade uninstall Script"
 
 BASEDIR=$(dirname $0)

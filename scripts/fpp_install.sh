@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# fpp-osc install script
+# fpp-arcade install script
 
 BASEDIR=$(dirname $0)
 cd $BASEDIR
