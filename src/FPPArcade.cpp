@@ -19,6 +19,7 @@
 extern "C" {
 #include <SDL2/SDL.h>
 }
+#include "Timers.h"
 #endif
 #include <arpa/inet.h>
 #include <cstring>
@@ -31,6 +32,7 @@ extern "C" {
 #include "FPPArcade.h"
 
 #include "commands/Commands.h"
+#include "fpphttp.h"
 #include "common.h"
 #include "settings.h"
 #include "Plugin.h"
@@ -395,6 +397,11 @@ public:
         }
     }
     virtual ~FPPArcadePlugin() {
+#ifdef USE_SDL_CONTROLLERS
+        // Stop pumping SDL before the plugin's code is unloaded so the timer
+        // callback can't fire into freed memory.
+        Timers::INSTANCE.stopPeriodicTimer("ArcadeSDLEventPump");
+#endif
         resetArcadeState();
         for (auto & a : games) {
             for (auto &g : a.second) {
@@ -527,13 +534,13 @@ public:
             }
         };
         auto handleArcade2 = handleArcade;
-        auto handleArcade3 = handleArcade;
-        auto handleArcade4 = handleArcade;
 
+        // Only the plain paths are needed: Apache rewrites
+        // api/plugin-apis/arcade/* to localhost:32322/arcade/*, stripping the
+        // plugin-apis/ prefix, so "/api/plugin-apis/arcade/*" routes would
+        // never be reached.
         drogon::app().registerHandler("/arcade/controllers", std::move(handleArcade), {drogon::Get});
         drogon::app().registerHandler("/arcade/events", std::move(handleArcade2), {drogon::Get});
-        drogon::app().registerHandler("/api/plugin-apis/arcade/controllers", std::move(handleArcade3), {drogon::Get});
-        drogon::app().registerHandler("/api/plugin-apis/arcade/events", std::move(handleArcade4), {drogon::Get});
     }
 
 #ifdef USE_SDL_CONTROLLERS
@@ -629,6 +636,19 @@ public:
 #ifdef USE_SDL_CONTROLLERS
         SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS);
         SDL_SetEventFilter(controller_event_filter, this);
+        // fppd no longer pumps the SDL event queue (it dropped the periodic
+        // SDL_PollEvent loop it used to run). We must pump it ourselves or it
+        // grows unbounded and controller input is never processed. Draining via
+        // SDL_PollEvent runs the event filter (handling controller input) and
+        // discards everything else. addPeriodicTimer fires on the main-loop
+        // thread, which is required for SDL event handling on macOS.
+        Timers::INSTANCE.addPeriodicTimer("ArcadeSDLEventPump", 16, []() {
+            SDL_Event ev;
+            while (SDL_PollEvent(&ev)) {
+                // Controller events are handled in controller_event_filter;
+                // any remaining events are intentionally discarded.
+            }
+        });
         {
             std::lock_guard<std::mutex> lock(joysticksLock);
             for (int x = 0; x < SDL_NumJoysticks(); x++) {
