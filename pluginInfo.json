@@ -42,5 +42,22 @@
             "sha": "",
             "allowUpdates": 1
         }
-    ]
+    ],
+    "privacy": {
+        "summary": "Runs on this device. Reads a USB gamepad if you plug one in; nothing is stored. A controller button can be set to send its command to other FPP players you pick.",
+        "sends": [
+            {
+                "to": "the FPP players you pick in a controller mapping",
+                "what": "the FPP command you mapped to a controller button or axis",
+                "why": "to run that command on other players in your show",
+                "alwaysOn": false
+            }
+        ],
+        "collects": [],
+        "sensors": [],
+        "remoteAccess": "none",
+        "systemChanges": [],
+        "closedCode": false,
+        "other": "Reads any USB joystick or gamepad plugged into this device and keeps the last 20 button presses in memory (readable on its Joysticks page and at /api/plugin-apis/arcade/events by anyone who can open FPP's web pages; cleared when fppd restarts); nothing is written to disk. Its game and joystick settings (config/plugin.fpp-arcade.json and config/joysticks.json) are kept after uninstall."
+    }
 }
