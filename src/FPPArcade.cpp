@@ -25,6 +25,8 @@ extern "C" {
 #include <list>
 #include <vector>
 #include <cmath>
+#include <algorithm>
+#include <iterator>
 #include <fcntl.h>
 #include <mutex>
 
@@ -202,6 +204,12 @@ void FPPArcadeGame::stop() {
         m->setRunningEffect(new ClearRunningEffect(m), 10);
     }
 }
+void FPPArcadeGame::clearEffect() {
+    PixelOverlayModel *m = PixelOverlayManager::INSTANCE.getModel(modelName);
+    if (m != nullptr) {
+        m->clearRunningEffect();
+    }
+}
 //default behavior will map the axis directions to button presses
 void FPPArcadeGame::axis(const std::string &axis, int value, const std::string &joystickName) {
     std::string btn = "";
@@ -371,7 +379,6 @@ public:
         };
         FileMonitor::INSTANCE.AddFile(name, FPP_DIR_CONFIG("/plugin.fpp-arcade.json"), reload);
 
-        int idx = 0;
         if (FileExists(FPP_DIR_CONFIG("/plugin.fpp-arcade.json"))) {
             Json::Value root;
             if (LoadJsonFromFile(FPP_DIR_CONFIG("/plugin.fpp-arcade.json"), root)
@@ -381,7 +388,9 @@ public:
                         std::string model = root["games"][x]["model"].asString();
                         games[model].push_back(createGame(root["games"][x]));
                         if (games[model].back() != nullptr) {
-                            games[model].back()->setIdx(++idx);
+                            // x is the row's position in the config array, which
+                            // is the number shown in the setup page's "#" column.
+                            games[model].back()->setIdx(x + 1);
                         }
                     }
                 }
@@ -428,7 +437,6 @@ public:
         }
         games.clear();
 
-        int idx = 0;
         if (FileExists(FPP_DIR_CONFIG("/plugin.fpp-arcade.json"))) {
             Json::Value root;
             if (LoadJsonFromFile(FPP_DIR_CONFIG("/plugin.fpp-arcade.json"), root)
@@ -438,7 +446,8 @@ public:
                         std::string model = root["games"][x]["model"].asString();
                         games[model].push_back(createGame(root["games"][x]));
                         if (games[model].back() != nullptr) {
-                            games[model].back()->setIdx(++idx);
+                            // Match the setup page row number (see constructor).
+                            games[model].back()->setIdx(x + 1);
                         }
                     }
                 }
@@ -474,6 +483,17 @@ public:
         {
             std::lock_guard<std::mutex> lock(joysticksLock);
             joysticks.clear();
+        }
+        // The overlay models own the running effect objects, whose vtables
+        // live in this library. FPP is about to dlclose() us while its
+        // overlay thread keeps calling update() on them, so clear them all
+        // here, before that can happen.
+        for (auto &a : games) {
+            for (auto &g : a.second) {
+                if (g) {
+                    g->clearEffect();
+                }
+            }
         }
         resetArcadeState();
         return nullptr;
@@ -530,23 +550,31 @@ public:
     std::unique_ptr<Command::Result>  selectGame(const std::vector<std::string> &args) {
         int idx = std::atoi(args[0].c_str());
         const std::string model = args.size() > 1 ? args[1] : "";
-        int max = games[model].size();
-        if (max == 0) {
+        auto &candidates = games[model];
+        if (candidates.empty()) {
             return std::make_unique<Command::ErrorResult>("FPP Arcade No games configured for model " + model);
         }
-        if (games[model].front()->isRunning()) {
-            games[model].front()->stop();
+        auto target = std::find_if(candidates.begin(), candidates.end(), [idx](FPPArcadeGame *g) {
+            return g != nullptr && g->getIdx() == idx;
+        });
+        if (target == candidates.end()) {
+            return std::make_unique<Command::ErrorResult>("FPP Arcade Could not find game matching " + args[0] + " for model " + model);
         }
-        for (int x = 0; x < max; x++) {
-            FPPArcadeGame *g = games[model].front();
-            if (g->getIdx() == idx) {
-                return std::make_unique<Command::Result>("FPP Arcade Game " + g->getName() + " Selected");
-            } else {
-                games[model].pop_front();
-                games[model].push_back(g);
+        const std::string gameName = (*target)->getName();
+        int rotations = std::distance(candidates.begin(), target);
+        if (rotations > 0) {
+            // Only stop the current game when actually switching away from it;
+            // re-selecting the active game should leave it running.
+            if (candidates.front()->isRunning()) {
+                candidates.front()->stop();
+            }
+            for (int i = 0; i < rotations; i++) {
+                FPPArcadeGame *g = candidates.front();
+                candidates.pop_front();
+                candidates.push_back(g);
             }
         }
-        return std::make_unique<Command::ErrorResult>("FPP Arcade Could not find game matching " + args[0] + " for model " + model);
+        return std::make_unique<Command::Result>("FPP Arcade Game " + gameName + " Selected");
     }
     virtual std::unique_ptr<Command::Result> runAxisCommand(const std::vector<std::string> &args) {
         const std::string axis = args[0];

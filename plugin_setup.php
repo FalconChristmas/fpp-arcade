@@ -213,6 +213,12 @@ $(document).ready(function() {
 </tr>
 </table>
 
+<p style="margin: 4px 0 10px 0;">
+    The <b>#</b> column is the game's row number. To jump directly to a game from a GPIO
+    button or other FPP event, create an <b>FPP Arcade Select Game</b> command with
+    <b>Game</b> set to that row number and <b>Target</b> set to the game's model.
+</p>
+
 <div class='fppTableWrapper fppTableWrapperAsTable'>
 <div class='fppTableContents'>
 <table class="fppTable" id="arcadeTable"  width='100%'>

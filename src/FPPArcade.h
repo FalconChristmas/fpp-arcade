@@ -18,6 +18,7 @@ public:
     
     virtual bool isRunning();
     virtual void stop();
+    void clearEffect();
 
     int getIdx() const { return idx; };
     void setIdx(int i) { idx = i; }
