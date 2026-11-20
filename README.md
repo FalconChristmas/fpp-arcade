@@ -33,11 +33,20 @@ Two pages are added to the FPP UI:
 
 The plugin registers three FPP Commands:
 
-- **FPP Arcade Select Game** — start a game on a given overlay model.
+- **FPP Arcade Select Game** — select the game at a given row number on an overlay model.
+  `Game` is the row number shown in the **#** column on the Arcade Games setup page, and
+  `Target` is the game's overlay model. The selected game starts on the next directional
+  button press.
 - **FPP Arcade Button** — deliver a button press/release (Up, Down, Left, Right, Fire, Select, Start).
 - **FPP Arcade Axis** — deliver an analog axis position.
 
 Wire these to GPIO inputs, the joystick page, or any other FPP event source to provide controls.
+
+For example, to give each game its own physical button on a podium, create an
+**FPP Arcade Select Game** command for each button with `Game` set to that game's row
+number and `Target` set to its model, then assign each GPIO input to the matching
+command. A button labeled "Break Out" wired to `Game: 3` selects row 3; the next
+directional button press starts that game.
 
 ## License
 
